@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import ScriptEditor from '@/components/Editor/ScriptEditor';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import { useToast } from '@/components/Toast';
 import type { Script } from '@/lib/types';
 
 interface ScriptItem {
@@ -15,7 +18,8 @@ export default function ScriptsPage() {
   const [scripts, setScripts] = useState<ScriptItem[]>([]);
   const [selectedScript, setSelectedScript] = useState<Script | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; title: string } | null>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -37,10 +41,10 @@ export default function ScriptsPage() {
       if (result.success) {
         setScripts(result.scripts);
       } else {
-        setError(result.error || '获取剧本列表失败');
+        addToast(result.error || '获取剧本列表失败', 'error');
       }
     } catch (error) {
-      setError('网络错误，请稍后重试');
+      addToast('网络错误，请稍后重试', 'error');
     } finally {
       setLoading(false);
     }
@@ -55,33 +59,40 @@ export default function ScriptsPage() {
       if (result.success) {
         setSelectedScript(result.script.content);
       } else {
-        setError(result.error || '获取剧本失败');
+        addToast(result.error || '获取剧本失败', 'error');
       }
     } catch (error) {
-      setError('网络错误，请稍后重试');
+      addToast('网络错误，请稍后重试', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteScript = async (id: string) => {
-    if (!confirm('确定要删除这个剧本吗？')) return;
+  const handleDeleteClick = (id: string, title: string) => {
+    setDeleteConfirm({ id, title });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
     
     try {
-      const response = await fetch(`/api/scripts?id=${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/scripts?id=${deleteConfirm.id}`, { method: 'DELETE' });
       const result = await response.json();
       
       if (result.success) {
-        setScripts(scripts.filter(s => s.id !== id));
-        if (selectedScript && selectedScript.meta?.title === scripts.find(s => s.id === id)?.title) {
+        setScripts(scripts.filter(s => s.id !== deleteConfirm.id));
+        if (selectedScript && selectedScript.meta?.title === scripts.find(s => s.id === deleteConfirm.id)?.title) {
           setSelectedScript(null);
         }
+        addToast('剧本删除成功', 'success');
       } else {
-        setError(result.error || '删除失败');
+        addToast(result.error || '删除失败', 'error');
       }
     } catch (error) {
-      setError('网络错误，请稍后重试');
+      addToast('网络错误，请稍后重试', 'error');
     }
+    
+    setDeleteConfirm(null);
   };
 
   const handleUpdateScript = (updatedScript: Script) => {
@@ -112,10 +123,8 @@ export default function ScriptsPage() {
               
               {loading ? (
                 <div className="flex justify-center items-center py-8">
-                  <div className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                  <LoadingSpinner size="lg" />
                 </div>
-              ) : error ? (
-                <p className="text-red-600 text-center py-8">{error}</p>
               ) : scripts.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">
                   <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,7 +154,7 @@ export default function ScriptsPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteScript(script.id);
+                          handleDeleteClick(script.id, script.title);
                         }}
                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       >
@@ -177,10 +186,23 @@ export default function ScriptsPage() {
                 <h3 className="text-lg font-medium text-gray-600 mb-2">选择一个剧本</h3>
                 <p className="text-gray-400">从左侧列表中选择一个剧本进行编辑</p>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </main>
+      
+      {deleteConfirm && (
+        <ConfirmDialog
+          isOpen={!!deleteConfirm}
+          title="删除剧本"
+          message={`确定要删除剧本 "${deleteConfirm.title}" 吗？此操作不可撤销。`}
+          confirmText="删除"
+          cancelText="取消"
+          type="danger"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
     </div>
   );
 }

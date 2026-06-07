@@ -3,9 +3,11 @@
 import Navbar from '@/components/Navbar';
 import FileUpload from '@/components/FileUpload';
 import ScriptEditor from '@/components/Editor/ScriptEditor';
-import { useState } from 'react';
+import LoadingSpinner from '@/components/LoadingSpinner';
+import { useState, useEffect } from 'react';
 import type { Script } from '@/lib/types';
 import yaml from 'js-yaml';
+import { useToast } from '@/components/Toast';
 
 type Status = 'idle' | 'uploaded' | 'converting' | 'editing';
 
@@ -13,10 +15,13 @@ export default function Home() {
   const [status, setStatus] = useState<Status>('idle');
   const [selectedFile, setSelectedFile] = useState<{ content: string; filename: string } | null>(null);
   const [script, setScript] = useState<Script | null>(null);
-  const [error, setError] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { addToast } = useToast();
 
-  const isLoggedIn = typeof window !== 'undefined' && !!localStorage.getItem('user');
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem('user'));
+  }, []);
 
   const handleFileSelect = (content: string, filename: string) => {
     setSelectedFile({ content, filename });
@@ -28,7 +33,6 @@ export default function Home() {
     if (!selectedFile) return;
     
     setStatus('converting');
-    setError('');
     
     try {
       const response = await fetch('/api/convert', {
@@ -43,15 +47,17 @@ export default function Home() {
         setScript(result.script);
         setStatus('editing');
         if (result.isMock) {
-          setError(result.error || '当前使用示例数据，AI API调用失败');
+          addToast(result.error || '当前使用示例数据，AI API调用失败', 'warning');
+        } else {
+          addToast('剧本转换成功！', 'success');
         }
       } else {
-        setError(result.error || '转换失败');
+        addToast(result.error || '转换失败', 'error');
         setStatus('uploaded');
       }
     } catch (error) {
       console.error('Convert error:', error);
-      setError('网络错误，请稍后重试');
+      addToast('网络错误，请稍后重试', 'error');
       setStatus('uploaded');
     }
   };
@@ -88,14 +94,15 @@ export default function Home() {
       
       if (result.success) {
         setSaveStatus('saved');
+        addToast('剧本保存成功！', 'success');
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
-        setError(result.error || '保存失败');
+        addToast(result.error || '保存失败', 'error');
         setSaveStatus('idle');
       }
     } catch (error) {
       console.error('Save error:', error);
-      setError('网络错误，请稍后重试');
+      addToast('网络错误，请稍后重试', 'error');
       setSaveStatus('idle');
     }
   };
@@ -199,10 +206,7 @@ export default function Home() {
                   <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                     {status === 'converting' ? (
                       <>
-                        <svg className="w-6 h-6 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
+                        <LoadingSpinner size="md" />
                         正在转换...
                       </>
                     ) : (
@@ -215,16 +219,22 @@ export default function Home() {
                     )}
                   </h2>
                   
+                  {status === 'converting' && (
+                    <div className="text-center py-8">
+                      <LoadingSpinner size="xl" />
+                      <p className="mt-4 text-gray-600">AI 正在分析您的小说内容，请稍候...</p>
+                    </div>
+                  )}
+                  
                   {status !== 'converting' && (
                     <div className="bg-gray-50 rounded-lg p-4">
                       <p className="text-sm text-gray-600 mb-2">文件名: {selectedFile.filename}</p>
                       <p className="text-sm text-gray-500">字符数: {selectedFile.content.length}</p>
-                      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
                       <div className="mt-4 flex gap-3">
                         <button
                           onClick={handleConvert}
                           disabled={status === 'converting'}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
                         >
                           开始转换
                         </button>
