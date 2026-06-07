@@ -1,0 +1,120 @@
+title: 剧本 YAML Schema
+type: object
+description: 剧本文件的结构定义
+properties:
+  meta:
+    type: object
+    description: 剧本元信息
+    properties:
+      title:
+        type: string
+        description: 剧本标题
+      author:
+        type: string
+        description: 原小说作者
+      adaptedBy:
+        type: string
+        description: 改编者
+      version:
+        type: string
+        description: 版本号
+      created:
+        type: string
+        format: date
+        description: 创建日期
+    required: [title]
+  characters:
+    type: array
+    description: 出场人物列表
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 人物姓名
+        description:
+          type: string
+          description: 人物简介/设定
+      required: [name]
+  scenes:
+    type: array
+    description: 场景列表
+    items:
+      type: object
+      description: 单场戏
+      properties:
+        id:
+          type: string
+          description: 场景唯一标识
+        title:
+          type: string
+          description: 场景标题
+        time:
+          type: string
+          description: 时间（如 "白天"、"夜晚"、"黄昏"）
+        location:
+          type: string
+          description: 地点
+        description:
+          type: string
+          description: 场景描述
+        elements:
+          type: array
+          description: 场景内的元素（对话、动作、旁白等）
+          items:
+            type: object
+            oneOf:
+              - title: 对话
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [dialogue]
+                  character:
+                    type: string
+                    description: 说话人物
+                  content:
+                    type: string
+                    description: 对话内容
+                  tone:
+                    type: string
+                    description: 情感音调（如 "愤怒"、"温柔"、"焦急"）
+                  action:
+                    type: string
+                    description: 伴随动作
+                required: [type, character, content]
+              - title: 动作
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [action]
+                  character:
+                    type: string
+                    description: 执行动作的人物（可选，空表示场景动作）
+                  content:
+                    type: string
+                    description: 动作描述
+                required: [type, content]
+              - title: 旁白
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [narration]
+                  content:
+                    type: string
+                    description: 旁白内容
+                required: [type, content]
+              - title: 场景转换
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [transition]
+                  content:
+                    type: string
+                    description: 转换描述（如 "淡入"、"切出"）
+                required: [type, content]
+      required: [id, location, elements]
+required: [meta, scenes]
