@@ -12,9 +12,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const script = await convertNovelToScript(content);
+    const result = await convertNovelToScript(content);
     
-    return NextResponse.json({ success: true, script });
+    return NextResponse.json({ 
+      success: true, 
+      script: result.script,
+      isMock: result.isMock,
+      error: result.error 
+    });
   } catch (error) {
     console.error('Conversion error:', error);
     return NextResponse.json(
