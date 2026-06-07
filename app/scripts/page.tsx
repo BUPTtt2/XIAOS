@@ -186,7 +186,7 @@ export default function ScriptsPage() {
                 <h3 className="text-lg font-medium text-gray-600 mb-2">选择一个剧本</h3>
                 <p className="text-gray-400">从左侧列表中选择一个剧本进行编辑</p>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>
