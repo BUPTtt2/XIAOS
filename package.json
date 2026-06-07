@@ -15,7 +15,8 @@
     "@prisma/client": "^5.22.0",
     "js-yaml": "^4.1.0",
     "openai": "^4.68.1",
-    "next-auth": "^5.0.0-beta.25"
+    "next-auth": "^5.0.0-beta.25",
+    "mammoth": "^1.6.0"
   },
   "devDependencies": {
     "@types/node": "^20",
