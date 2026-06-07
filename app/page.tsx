@@ -4,10 +4,11 @@ import Navbar from '@/components/Navbar';
 import FileUpload from '@/components/FileUpload';
 import ScriptEditor from '@/components/Editor/ScriptEditor';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Script } from '@/lib/types';
 import yaml from 'js-yaml';
 import { useToast } from '@/components/Toast';
+import { saveDraft, getDraft, deleteDraft } from '@/lib/storage';
 
 type Status = 'idle' | 'uploaded' | 'converting' | 'editing';
 
@@ -19,14 +20,54 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { addToast } = useToast();
 
+  // 检查是否有保存的草稿
   useEffect(() => {
     setIsLoggedIn(!!localStorage.getItem('user'));
+    
+    const draft = getDraft();
+    if (draft) {
+      const shouldRestore = confirm('发现未保存的剧本草稿，是否恢复？');
+      if (shouldRestore) {
+        setScript(draft.script);
+        setSelectedFile({ content: draft.fileContent, filename: draft.fileName });
+        setStatus('editing');
+        addToast('已恢复上次的剧本草稿', 'info');
+      } else {
+        deleteDraft();
+      }
+    }
   }, []);
+
+  // 自动保存草稿
+  const handleScriptUpdate = useCallback((updatedScript: Script) => {
+    setScript(updatedScript);
+    
+    // 如果有文件内容和剧本，自动保存草稿
+    if (selectedFile && updatedScript) {
+      saveDraft({
+        script: updatedScript,
+        fileContent: selectedFile.content,
+        fileName: selectedFile.filename,
+        savedAt: new Date().toISOString(),
+      });
+    }
+  }, [selectedFile]);
+
+  // 当剧本更新时自动保存
+  useEffect(() => {
+    if (script && selectedFile && status === 'editing') {
+      saveDraft({
+        script,
+        fileContent: selectedFile.content,
+        fileName: selectedFile.filename,
+        savedAt: new Date().toISOString(),
+      });
+    }
+  }, [script, selectedFile, status]);
 
   const handleFileSelect = (content: string, filename: string) => {
     setSelectedFile({ content, filename });
     setStatus('uploaded');
-    setError('');
   };
 
   const handleConvert = async () => {
@@ -93,6 +134,8 @@ export default function Home() {
       const result = await response.json();
       
       if (result.success) {
+        // 成功保存到数据库后，删除本地草稿
+        deleteDraft();
         setSaveStatus('saved');
         addToast('剧本保存成功！', 'success');
         setTimeout(() => setSaveStatus('idle'), 3000);
@@ -187,7 +230,7 @@ export default function Home() {
         )}
 
         {status === 'editing' && script ? (
-          <ScriptEditor script={script} onUpdate={setScript} />
+          <ScriptEditor script={script} onUpdate={handleScriptUpdate} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
