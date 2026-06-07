@@ -1,0 +1,32 @@
+## 本次变更
+
+1. 创建用户注册 API（/api/auth/register）
+2. 创建用户登录 API（/api/auth/login）
+3. 创建 API Key 管理 API（/api/auth/api-key）
+4. 创建登录页面（/login）
+5. 创建注册页面（/register）
+6. 添加 bcrypt 依赖用于密码加密
+
+## 交付文件
+- `app/api/auth/register/route.ts` - 用户注册 API
+- `app/api/auth/login/route.ts` - 用户登录 API
+- `app/api/auth/api-key/route.ts` - API Key 管理 API
+- `app/(auth)/login/page.tsx` - 登录页面
+- `app/(auth)/register/page.tsx` - 注册页面
+- `package.json` - 添加 bcrypt 依赖
+- `docs/03-最小闭环-里程碑-5.md` - PR5 里程碑文档
+
+## 核心功能
+1. **用户注册**：邮箱+密码注册，密码加密存储
+2. **用户登录**：邮箱密码验证，返回用户信息
+3. **API Key 管理**：更新/删除用户的 ModelScope API Key
+4. **本地存储**：登录成功后将用户信息存储到 localStorage
+
+## 验证方式
+1. 运行 `npm run dev` 启动开发服务器
+2. 访问 /register 注册新用户
+3. 访问 /login 登录
+4. 验证登录后用户信息存储正常
+
+---
+相关文档参见：`docs/03-最小闭环-里程碑-5.md`

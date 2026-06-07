@@ -1,0 +1,54 @@
+# PR7: 用户体验增强
+
+## 本次变更
+
+### 新增功能
+
+1. **加载动画组件** (`components/LoadingSpinner.tsx`)
+   - 多种尺寸（sm/md/lg/xl）
+   - 可自定义颜色
+   - 优雅的加载动画效果
+
+2. **Toast 通知组件** (`components/Toast.tsx`)
+   - 支持成功、错误、警告、信息四种类型
+   - 自动4秒后消失
+   - 从右侧滑入动画
+   - ToastProvider 全局状态管理
+
+3. **确认对话框组件** (`components/ConfirmDialog.tsx`)
+   - 支持危险/警告/信息三种样式
+   - 点击背景或ESC可取消
+   - 支持自定义确认/取消文本
+
+### 改进
+
+1. **首页改进** (`app/page.tsx`)
+   - 使用 Toast 替换原来的错误提示
+   - 使用 LoadingSpinner 显示加载状态
+   - 添加转换中的详细提示
+   - 修复 Hydration 错误
+
+2. **我的剧本页面改进** (`app/scripts/page.tsx`)
+   - 使用确认对话框替换confirm()
+   - 使用Toast显示操作结果
+   - 使用LoadingSpinner替代自制加载动画
+   - 移除不必要的error状态
+
+3. **布局改进** (`app/layout.tsx`)
+   - 集成 ToastProvider 全局状态
+
+4. **新增 .gitignore**
+   - 忽略node_modules、构建产物、数据库、环境变量等
+
+## 核心改进
+
+- 更流畅的用户体验
+- 更友好的操作反馈
+- 避免Hydration错误
+- 代码结构更规范
+
+## 验证方式
+
+1. 运行 `npm run dev`
+2. 访问首页，上传文件进行转换，观察加载动画和Toast
+3. 进入"我的剧本"页面，测试删除功能的确认对话框
