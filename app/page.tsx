@@ -1,3 +1,5 @@
+'use client';
+
 import Navbar from '@/components/Navbar';
 import FileUpload from '@/components/FileUpload';
 import ScriptEditor from '@/components/Editor/ScriptEditor';
