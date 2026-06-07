@@ -1,0 +1,28 @@
+## 本次变更
+
+1. 创建 ModelScope API 调用模块（支持 DeepSeek-V4-Flash 模型）
+2. 创建 AI 转换 API 路由 (/api/convert)
+3. 更新前端添加转换功能和剧本预览
+4. 实现模拟 AI 响应（mock 数据）作为降级方案
+5. 添加 YAML 下载功能
+
+## 交付文件
+- `lib/modelscope.ts` - ModelScope API 调用模块
+- `app/api/convert/route.ts` - AI 转换 API 路由
+- `app/page.tsx` - 更新后的首页（带转换和预览功能）
+- `docs/03-最小闭环-里程碑-3.md` - PR3 里程碑文档
+
+## 核心功能
+1. **AI 转换**：调用 ModelScope DeepSeek-V4-Flash 模型进行小说转剧本
+2. **降级方案**：API 失败时使用 mock 数据生成剧本
+3. **剧本预览**：实时展示转换后的剧本结构
+4. **YAML 下载**：支持下载生成的剧本文件
+
+## 验证方式
+1. 运行 `npm run dev` 启动开发服务器
+2. 上传小说文件，点击"开始转换"
+3. 验证剧本预览显示正常
+4. 验证 YAML 下载功能
+
+---
+相关文档参见：`docs/03-最小闭环-里程碑-3.md`
