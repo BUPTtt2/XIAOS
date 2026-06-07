@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import yaml from 'js-yaml';
 import type { Script } from './types';
+import { generateSmartMockScript } from './smartMock';
 
 const apiKey = process.env.MODELSCOPE_API_KEY || 'ms-25df072b-5228-4a46-9a64-c61a3e547744';
 
@@ -87,8 +88,8 @@ export async function convertNovelToScript(novelText: string): Promise<{ script:
     yamlContent = yamlContent.trim();
     
     if (!yamlContent) {
-      console.warn('AI returned empty response, using mock data');
-      return { script: generateMockScript(novelText), isMock: true, error: 'AI返回空响应' };
+      console.warn('AI returned empty response, using smart mock data');
+      return { script: generateSmartMockScript(novelText), isMock: true, error: 'AI返回空响应' };
     }
 
     return { script: parseYamlToScript(yamlContent, novelText), isMock: false };
@@ -98,7 +99,7 @@ export async function convertNovelToScript(novelText: string): Promise<{ script:
     console.error('Full error:', error);
     
     return { 
-      script: generateMockScript(novelText), 
+      script: generateSmartMockScript(novelText), 
       isMock: true, 
       error: `API调用失败: ${errorMessage}` 
     };
@@ -118,12 +119,13 @@ function parseYamlToScript(yamlContent: string, fallbackText: string): Script {
         },
       };
     }
-    console.warn('YAML content is invalid or incomplete, using mock data');
+    console.warn('YAML content is invalid or incomplete, using smart mock data');
   } catch (error: any) {
     console.error('YAML parse error:', error.message);
     console.error('YAML content to parse:', yamlContent);
   }
-  return generateMockScript(fallbackText);
+  // 使用智能 mock 生成器
+  return generateSmartMockScript(fallbackText);
 }
 
 function generateMockScript(novelText: string): Script {
