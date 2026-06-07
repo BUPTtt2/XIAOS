@@ -1,15 +1,25 @@
 import { useState } from 'react';
 import type { Scene, ScriptElement, ScriptElementType } from '@/lib/types';
+import BatchToolbar from '@/components/BatchOperations';
 
 interface SceneEditorProps {
   scene: Scene;
   onUpdate: (scene: Scene) => void;
   onDelete: () => void;
+  onCopy: () => void;
   onAddElement: () => void;
 }
 
-export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }: SceneEditorProps) {
+export default function SceneEditor({ 
+  scene, 
+  onUpdate, 
+  onDelete, 
+  onCopy,
+  onAddElement 
+}: SceneEditorProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedElements, setSelectedElements] = useState<Set<number>>(new Set());
 
   const updateSceneField = (field: keyof Scene, value: string) => {
     onUpdate({ ...scene, [field]: value });
@@ -26,6 +36,15 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
     onUpdate({ ...scene, elements: newElements });
   };
 
+  const copyElement = (index: number) => {
+    const elementToCopy = scene.elements[index];
+    const newElement = { ...elementToCopy };
+    const newElements = [...scene.elements];
+    newElements.splice(index + 1, 0, newElement);
+    onUpdate({ ...scene, elements: newElements });
+    setEditingId(`element-${index + 1}`);
+  };
+
   const addNewElement = () => {
     const newElement: ScriptElement = {
       type: 'dialogue',
@@ -36,8 +55,35 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
     setEditingId(`element-${scene.elements.length}`);
   };
 
+  // 批量选择
+  const toggleElementSelection = (index: number) => {
+    const newSelected = new Set(selectedElements);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedElements(newSelected);
+  };
+
+  const selectAllElements = () => {
+    setSelectedElements(new Set(scene.elements.map((_, i) => i)));
+  };
+
+  const deselectAllElements = () => {
+    setSelectedElements(new Set());
+  };
+
+  const deleteSelectedElements = () => {
+    const newElements = scene.elements.filter((_, i) => !selectedElements.has(i));
+    onUpdate({ ...scene, elements: newElements });
+    setSelectedElements(new Set());
+    setBatchMode(false);
+  };
+
   const renderElementEditor = (element: ScriptElement, index: number) => {
     const isEditing = editingId === `element-${index}`;
+    const isSelected = selectedElements.has(index);
     
     if (isEditing) {
       return (
@@ -146,9 +192,31 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
     return (
       <div
         key={index}
-        onClick={() => setEditingId(`element-${index}`)}
-        className="border border-gray-200 rounded-lg p-3 mb-2 hover:bg-gray-50 cursor-pointer transition-colors"
+        onClick={() => {
+          if (batchMode) {
+            toggleElementSelection(index);
+          } else {
+            setEditingId(`element-${index}`);
+          }
+        }}
+        className={`border rounded-lg p-3 mb-2 hover:bg-gray-50 cursor-pointer transition-colors ${
+          batchMode
+            ? isSelected
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-200'
+            : 'border-gray-200'
+        }`}
       >
+        {batchMode && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => toggleElementSelection(index)}
+            className="mr-2"
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
+        
         {element.type === 'dialogue' && (
           <div>
             <span className="font-medium text-purple-600">{(element as { character?: string }).character || '未知人物'}</span>
@@ -179,6 +247,18 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
           <p className="text-sm text-blue-500 font-medium text-center py-1">
             → {(element as { content: string }).content}
           </p>
+        )}
+        
+        {!batchMode && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copyElement(index);
+            }}
+            className="mt-2 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+          >
+            复制
+          </button>
         )}
       </div>
     );
@@ -212,14 +292,32 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
             />
           </div>
         </div>
-        <button
-          onClick={onDelete}
-          className="text-red-500 hover:text-red-700 p-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setBatchMode(!batchMode)}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+              batchMode
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 hover:bg-gray-200'
+            }`}
+          >
+            {batchMode ? '退出批量' : '批量操作'}
+          </button>
+          <button
+            onClick={onCopy}
+            className="px-3 py-1 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
+          >
+            复制场景
+          </button>
+          <button
+            onClick={onDelete}
+            className="text-red-500 hover:text-red-700 p-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
       </div>
       
       <textarea
@@ -229,6 +327,20 @@ export default function SceneEditor({ scene, onUpdate, onDelete, onAddElement }:
         className="w-full px-3 py-2 border border-gray-200 rounded-lg mb-4 text-sm resize-none"
         rows={2}
       />
+      
+      {batchMode && selectedElements.size > 0 && (
+        <BatchToolbar
+          selectedCount={selectedElements.size}
+          totalCount={scene.elements.length}
+          onSelectAll={selectAllElements}
+          onDeselectAll={deselectAllElements}
+          onDeleteSelected={deleteSelectedElements}
+          onCancel={() => {
+            setBatchMode(false);
+            setSelectedElements(new Set());
+          }}
+        />
+      )}
       
       <div className="space-y-2">
         {scene.elements.map((element, index) => renderElementEditor(element, index))}
