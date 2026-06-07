@@ -42,6 +42,9 @@ export default function Home() {
       if (result.success) {
         setScript(result.script);
         setStatus('editing');
+        if (result.isMock) {
+          setError(result.error || '当前使用示例数据，AI API调用失败');
+        }
       } else {
         setError(result.error || '转换失败');
         setStatus('uploaded');

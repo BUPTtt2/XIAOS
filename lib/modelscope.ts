@@ -1,9 +1,12 @@
 import OpenAI from 'openai';
+import yaml from 'js-yaml';
 import type { Script } from './types';
+
+const apiKey = process.env.MODELSCOPE_API_KEY || 'ms-25df072b-5228-4a46-9a64-c61a3e547744';
 
 const client = new OpenAI({
   baseURL: 'https://api-inference.modelscope.cn/v1',
-  apiKey: process.env.MODELSCOPE_API_KEY || 'ms-25df072b-5228-4a46-9a64-c61a3e547744',
+  apiKey: apiKey,
 });
 
 const SYSTEM_PROMPT = `
@@ -41,17 +44,22 @@ scenes:
 \`\`\`
 
 要求：
-1. 分析小说内容，提取至少3个章节的主要情节
+1. 分析小说内容，提取主要情节
 2. 将小说转换为 3-5 个场景的剧本
 3. 确保每个人物都有名字，对话符合人物性格
 4. 添加适当的动作和旁白描述
 5. 输出必须是有效的 YAML 格式，不要包含其他文字
+6. 只输出 YAML 代码，不要输出其他解释性文字
 
 开始处理：
 `;
 
-export async function convertNovelToScript(novelText: string): Promise<Script> {
+export async function convertNovelToScript(novelText: string): Promise<{ script: Script; isMock: boolean; error?: string }> {
   try {
+    console.log('Starting AI conversion...');
+    console.log('API Key configured:', apiKey ? 'Yes' : 'No');
+    console.log('Text length:', novelText.length);
+    
     const response = await client.chat.completions.create({
       model: 'deepseek-ai/DeepSeek-V4-Flash',
       messages: [
@@ -62,26 +70,60 @@ export async function convertNovelToScript(novelText: string): Promise<Script> {
       max_tokens: 4000,
     });
 
-    const yamlContent = response.choices[0]?.message?.content?.trim() || '';
-    return parseYamlToScript(yamlContent);
-  } catch (error) {
-    console.error('ModelScope API error:', error);
-    return generateMockScript(novelText);
+    let yamlContent = response.choices[0]?.message?.content?.trim() || '';
+    console.log('AI response received, length:', yamlContent.length);
+    console.log('First 500 chars:', yamlContent.substring(0, 500));
+    
+    // 清理YAML内容，移除可能的markdown代码块标记
+    if (yamlContent.startsWith('```yaml')) {
+      yamlContent = yamlContent.substring(7);
+    }
+    if (yamlContent.startsWith('```')) {
+      yamlContent = yamlContent.substring(3);
+    }
+    if (yamlContent.endsWith('```')) {
+      yamlContent = yamlContent.substring(0, yamlContent.length - 3);
+    }
+    yamlContent = yamlContent.trim();
+    
+    if (!yamlContent) {
+      console.warn('AI returned empty response, using mock data');
+      return { script: generateMockScript(novelText), isMock: true, error: 'AI返回空响应' };
+    }
+
+    return { script: parseYamlToScript(yamlContent, novelText), isMock: false };
+  } catch (error: any) {
+    const errorMessage = error.message || 'Unknown error';
+    console.error('ModelScope API error:', errorMessage);
+    console.error('Full error:', error);
+    
+    return { 
+      script: generateMockScript(novelText), 
+      isMock: true, 
+      error: `API调用失败: ${errorMessage}` 
+    };
   }
 }
 
-import yaml from 'js-yaml';
-
-function parseYamlToScript(yamlContent: string): Script {
+function parseYamlToScript(yamlContent: string, fallbackText: string): Script {
   try {
     const script = yaml.load(yamlContent) as Script;
-    if (script && script.meta && script.scenes) {
-      return script;
+    if (script && script.meta && script.scenes && script.scenes.length > 0) {
+      console.log('YAML parsed successfully');
+      return {
+        ...script,
+        meta: {
+          ...script.meta,
+          created: script.meta.created || new Date().toISOString().split('T')[0],
+        },
+      };
     }
-  } catch (error) {
-    console.error('YAML parse error:', error);
+    console.warn('YAML content is invalid or incomplete, using mock data');
+  } catch (error: any) {
+    console.error('YAML parse error:', error.message);
+    console.error('YAML content to parse:', yamlContent);
   }
-  return generateMockScript(yamlContent);
+  return generateMockScript(fallbackText);
 }
 
 function generateMockScript(novelText: string): Script {
