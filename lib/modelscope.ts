@@ -49,6 +49,7 @@ scenes:
 3. 确保每个人物都有名字，对话符合人物性格
 4. 添加适当的动作和旁白描述
 5. 输出必须是有效的 YAML 格式，不要包含其他文字
+6. 只输出 YAML 代码，不要输出其他解释性文字
 
 开始处理：
 `;
@@ -69,8 +70,21 @@ export async function convertNovelToScript(novelText: string): Promise<{ script:
       max_tokens: 4000,
     });
 
-    const yamlContent = response.choices[0]?.message?.content?.trim() || '';
+    let yamlContent = response.choices[0]?.message?.content?.trim() || '';
     console.log('AI response received, length:', yamlContent.length);
+    console.log('First 500 chars:', yamlContent.substring(0, 500));
+    
+    // 清理YAML内容，移除可能的markdown代码块标记
+    if (yamlContent.startsWith('```yaml')) {
+      yamlContent = yamlContent.substring(7);
+    }
+    if (yamlContent.startsWith('```')) {
+      yamlContent = yamlContent.substring(3);
+    }
+    if (yamlContent.endsWith('```')) {
+      yamlContent = yamlContent.substring(0, yamlContent.length - 3);
+    }
+    yamlContent = yamlContent.trim();
     
     if (!yamlContent) {
       console.warn('AI returned empty response, using mock data');
@@ -81,6 +95,7 @@ export async function convertNovelToScript(novelText: string): Promise<{ script:
   } catch (error: any) {
     const errorMessage = error.message || 'Unknown error';
     console.error('ModelScope API error:', errorMessage);
+    console.error('Full error:', error);
     
     return { 
       script: generateMockScript(novelText), 
@@ -106,6 +121,7 @@ function parseYamlToScript(yamlContent: string, fallbackText: string): Script {
     console.warn('YAML content is invalid or incomplete, using mock data');
   } catch (error: any) {
     console.error('YAML parse error:', error.message);
+    console.error('YAML content to parse:', yamlContent);
   }
   return generateMockScript(fallbackText);
 }
